@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat</title>
+</head>
+<body>
+    <div id="messages"></div>
+    <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" />
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        console.log("JavaScript is loaded.");
+        
+        const socket = new WebSocket('ws://localhost:42069');
+
+        // Array to store the last 10 messages
+        const messages = [];
+
+        // Function to update the message display
+        function updateMessages() {
+            const messagesContainer = document.getElementById('messages');
+            messagesContainer.innerHTML = '';  // Clear current messages
+            messages.forEach((message) => {
+                const messageElement = document.createElement('div');
+                messageElement.textContent = message;
+                messagesContainer.appendChild(messageElement);
+            });
+        }
+
+        socket.addEventListener('open', function () {
+            console.log('WebSocket connection established');
+        });
+
+        socket.addEventListener('close', function () {
+            console.log('WebSocket connection closed');
+        });
+
+        socket.addEventListener('message', function (event) {
+            console.log('Message received from server:', event.data);  // Log received messages
+
+            // Ensure the message is a string (convert Blob to string if needed)
+            let message = event.data;
+            if (message instanceof Blob) {
+                message = message.text();  // Convert Blob to text
+            }
+
+            // Handle promise from Blob text() method
+            message.then((text) => {
+                // Add the received message to the messages array
+                messages.push(text);
+
+                // Keep only the last 10 messages
+                if (messages.length > 10) {
+                    messages.shift();  // Remove the oldest message if there are more than 10
+                }
+
+                // Update the UI with the latest messages
+                updateMessages();
+            }).catch((err) => {
+                console.error("Error reading Blob:", err);
+            });
+        });
+
+        function sendMessage() {
+            console.log("Message is being sent");
+            const message = document.getElementById('message-input').value.trim();
+            if (message) {
+                socket.send(message);
+                document.getElementById('message-input').value = ''; // Clear the input field
+            }
+        }
+    </script>
+</body>
+</html>
